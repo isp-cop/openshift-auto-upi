@@ -1,6 +1,6 @@
 - name: Fetch ignition file for machine {{ virtual_machine_names[item.hostname] }}
   slurp:
-    src: '{{ helper.install_conf_dir }}/{{ item.ignition_config }}'
+    src: '{{ helper.install_ignition_dir }}/{{ item.hostname }}.ign'
   register: vsphere_ignition
 
 - name: Create a virtual machine from the template
@@ -35,6 +35,22 @@
       - name: '{{ vsphere.network_name }}'
         mac: '{{ item.macaddr }}'
     wait_for_ip_address: False
-    validate_certs: False
+    validate_certs: '{{ vsphere.validate_certs }}'
     state: present
-  when: virtual_machine_names[item.hostname] not in vsphere_existing_vms
+
+- name: Configure virtual machine to boot from ISO
+  include_tasks: attach_boot_iso.yml
+  when: openshift_install_config.static_ips.enabled
+
+- name: Power on virtual machine {{ virtual_machine_names[item.hostname] }}
+  vmware_guest:
+    hostname: '{{ vsphere.vcenter_hostname }}'
+    username: '{{ vsphere.vcenter_username }}'
+    password: '{{ vsphere.vcenter_password }}'
+    name: '{{ virtual_machine_names[item.hostname] }}'
+    validate_certs: '{{ vsphere.validate_certs }}'
+    state: poweredon
+
+- name: Detach boot ISO from the virtual machine
+  import_tasks: detach_boot_iso.yml
+  when: openshift_install_config.static_ips.enabled

@@ -8,6 +8,11 @@
     name: openshift_common
     tasks_from: compute_vm_names.yml
 
+- name: Install boot ISO tools
+  import_role:
+    name: openshift_common
+    tasks_from: install_iso_tools.yml
+
 - name: Ensure prerequisites
   import_tasks: ensure_prereqs.yml
 
@@ -17,8 +22,12 @@
 - name: Deploy hosts
   import_tasks: deploy_hosts.yml
 
-- name: Start hosts
-  import_tasks: start_hosts.yml
+- name: Wait for ssh on OpenShift hosts
+  import_role:
+    name: openshift_common
+    tasks_from: wait_for_ssh.yml
+  vars:
+    wait_for_ssh_existing_vms: '{{ vsphere_existing_vms }}'
 
 - name: Wait for the bootstrap to complete
   import_role:

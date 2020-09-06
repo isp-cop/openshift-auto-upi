@@ -8,7 +8,7 @@ Preparing infrastructure for OpenShift 4 installation by hand is a rather tediou
 
 * [Bare Metal](roles/openshift_baremetal)
 * [Libvirt](roles/openshift_libvirt_fwcfg)
-* [oVirt (RHEV)](roles/openshift_ovirt)
+* [oVirt (RHV)](roles/openshift_ovirt)
 * [vSphere](roles/openshift_vsphere)
 
 *openshift-auto-upi* comes with Ansible roles to provision and configure:
@@ -21,6 +21,19 @@ Preparing infrastructure for OpenShift 4 installation by hand is a rather tediou
 * [Mirror Registry](roles/mirror_registry)
 
 Note that the infrastructure from the above list provisioned using *openshift-auto-upi* is NOT meant for production use. It is meant to be a temporary fill in for your missing production-grade infrastructure. Using *openshift-auto-upi* to provision any of the infrastructure from the above list is optional.
+
+Some of the features offered by *openshift-auto-upi*:
+
+* Network configuration via DHCP or static IPs
+* User has full control over the `install-config.yaml` file and can customize it according to her/his needs.
+* User can customize ignition config files using filetranspiler and jsonpatch, see also [Customizing Ignition Configs](docs/customizing_ignition_configs.md)
+* Ignition config files are protected from being overwritten, see also [Ignition Config Protection](docs/ignition_config_protection.md)
+* Automated download of CoreOS images from Red Hat sites and upload onto the target platform
+* Automated bare metal installation, control of remote machines using BMC
+* Adding nodes to the existing cluster is supported and documented
+* `openshift-auto-upi` won't touch the existing nodes. It doesn't even trust the Ansible modules to not modify the existing nodes. Instead, it skips existing nodes altogether for maximum safety. 
+
+> *openshift-auto-upi* is great for situations where the official IPI installation method is not flexible enough and on the other hand the UPI installation is too tedious.
 
 # Deployment Overview
 
@@ -43,6 +56,21 @@ If the DNS server is managed by *openshift-auto-upi*, a DNS name will be created
 <hostname>.<cluster_name>.<base_domain>
 ```
 Note that these names are created only for your convenience. *openshift-auto-upi* doesn't rely on their existence as they are not required for installing OpenShift.
+
+### Using Static IPs
+
+If you prefer configuring your OpenShift hosts using static IPs as opposed to leveraging the default DHCP provisioning, *openshift-auto-upi* allows you to do that. Note that Static IPs feature is currently implemented for bare metal, Libvirt PXE, oVirt, and vSphere target platforms. Static IPs for Libvirt FwCfg is not implemented at this time.
+
+While you are configuring *openshift-auto-upi* (detailed information in the following sections), add your network configuration (gateway, netmask, name servers) to the *static_ips* section of the *openshift_install_config.yml* file:
+
+```
+$ cp inventory/group_vars/all/openshift_install_config.yml.sample \
+    inventory/group_vars/all/openshift_install_config.yml
+$ vi inventory/group_vars/all/openshift_install_config.yml
+```
+Remember to set the variable static_ips.enabled=True in the same file. You are all set! *openshift-auto-upi* will configure your OpenShift nodes using static IPs.
+
+For further information on the design of the Static IPs feature, you can refer to [OpenShift UPI using static IPs](https://www.openshift.com/blog/openshift-upi-using-static-ips).
 
 ## Platform-Specific Documentation
 
@@ -91,6 +119,21 @@ $ git clone https://github.com/noseka1/openshift-auto-upi.git
 $ git checkout <release_tag>
 $ cd openshift-auto-upi
 ```
+## Preparing for OpenShift Installation
+
+Create custom *openshift_install_config.yml* configuration:
+
+```
+$ cp inventory/group_vars/all/openshift_install_config.yml.sample \
+    inventory/group_vars/all/openshift_install_config.yml
+$ vi inventory/group_vars/all/openshift_install_config.yml
+```
+
+Download OpenShift clients using Ansible:
+
+```
+$ ansible-playbook clients.yml
+```
 
 ## Creating Mirror Registry
 
@@ -106,15 +149,7 @@ $ vi inventory/group_vars/all/infra/mirror_registry.yml
 $ ansible-playbook mirror_registry.yml
 ```
 
-## Preparing for OpenShift Installation
-
-Create custom *openshift_install_config.yml* configuration:
-
-```
-$ cp inventory/group_vars/all/openshift_install_config.yml.sample \
-    inventory/group_vars/all/openshift_install_config.yml
-$ vi inventory/group_vars/all/openshift_install_config.yml
-```
+## Defining OpenShift cluster hosts
 
 Create custom *openshift_cluster_hosts.yml* configuration:
 
@@ -122,12 +157,6 @@ Create custom *openshift_cluster_hosts.yml* configuration:
 $ cp inventory/group_vars/all/openshift_cluster_hosts.yml.sample \
     inventory/group_vars/all/openshift_cluster_hosts.yml
 $ vi inventory/group_vars/all/openshift_cluster_hosts.yml
-```
-
-Download OpenShift clients using Ansible:
-
-```
-$ ansible-playbook clients.yml
 ```
 
 ## Installing DHCP Server

@@ -1,7 +1,13 @@
 # OpenShift Installer configuration
 openshift_install_config:
-  # Version of OpenShift to be installed.
-  version: 4.3.0
+  # Choose OpenShift distribution (either ocp or okd):
+  # ocp = Red Hat OpenShift Container Platform, https://www.openshift.com/
+  # okd = Community distribution of Kubernetes, https://www.okd.io/
+  distribution: ocp
+  # Version of OpenShift to be installed (OCP or OKD).
+  version: 4.5.4
+  # Version of the CoreOS image (RHCOS or FCOS).
+  coreos_version: 4.5.2
   # Unique name of the OpenShift cluster which also becomes a part of cluster's FQDN.
   name: mycluster
   # Base domain which is appended to the cluster's name to form a cluster FQDN.
@@ -21,6 +27,27 @@ openshift_install_config:
   # for them to download their ignition files. Make sure that this URL is reachable
   # from the OpenShift nodes.
   ignition_url_prefix: 'http://192.168.150.2:81/openshift-auto-upi/mycluster'
+  # Configure OpenShift hosts using static IPs as opposed to using DHCP.
+  # This feature is currently supported for bare metal, libvirt_pxe, oVirt, and vSphere.
+  # It is not supported for libvirt_fwcfg.
+  # For bare metal and libvirt_pxe, the PXE menu config is modified to include the
+  # static IP configuration.
+  # For oVirt and vSphere, a boot ISO is created that includes a custom GRUB boot loader
+  # configuration that includes the static IP configuration. This custom GRUB confguration
+  # is used only during the first boot of the OpenShift hosts. Following boots will go
+  # back to using the factory GRUB configuration.
+  static_ips:
+    # Must enable in order to use the static IP provisioning.
+    enabled: False
+    parameters:
+      gateway: 192.168.150.1
+      netmask: 255.255.255.0
+      # On oVirt and libvirt the interface name is most likely "ens3". On vSphere the
+      # interface name is most likely "ens192".
+      interface: ens3
+      # List of DNS servers
+      nameservers:
+        - 192.168.150.1
   # When you deploy the cluster, this public SSH key is added to the core user’s
   # ~/.ssh/authorized_keys list. You can use this key to SSH into the OpenShift hosts
   # as the user core.

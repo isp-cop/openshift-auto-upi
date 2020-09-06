@@ -1,6 +1,6 @@
 - name: Fetch ignition file for machine {{ virtual_machine_names[item.hostname] }}
   slurp:
-    src: '{{ helper.install_conf_dir }}/{{ item.ignition_config }}'
+    src: '{{ helper.install_ignition_dir }}/{{ item.hostname }}.ign'
   register: ovirt_ignition
 
 - name: Create a virtual machine {{ virtual_machine_names[item.hostname] }}
@@ -31,3 +31,18 @@
     name: '{{ virtual_machine_names[item.hostname] }}'
     vm_name: '{{ virtual_machine_names[item.hostname] }}'
     size: '{{ item.disk_gb }} GiB'
+
+- name: Configure virtual machine to boot from ISO
+  include_tasks: attach_boot_iso.yml
+  when: openshift_install_config.static_ips.enabled
+
+- name: Power on virtual machine {{ virtual_machine_names[item.hostname] }}
+  ovirt_vm:
+    auth: '{{ ovirt_auth }}'
+    name: '{{ virtual_machine_names[item.hostname] }}'
+    cluster: '{{ ovirt.cluster_name }}'
+    state: running
+
+- name: Detach boot ISO from the virtual machine
+  import_tasks: detach_boot_iso.yml
+  when: openshift_install_config.static_ips.enabled

@@ -7,7 +7,7 @@
   import_tasks: create_volume.yml
   vars:
     libvirt_volume_name: '{{ virtual_machine_names[item.hostname] }}-ign'
-    libvirt_volume_data: '{{ helper.install_conf_dir }}/{{ item.ignition_config }}'
+    libvirt_volume_data: '{{ helper.install_ignition_dir }}/{{ item.hostname }}.ign'
 
 - name: Create a volume that contains the machine disk image
   import_tasks: create_volume_cow.yml
@@ -18,7 +18,9 @@
 
 - name: Retrieve ignition volume path
   command: |
-    virsh vol-path \
+    virsh \
+      --connect '{{ libvirt.libvirt_connection_uri }}' \
+      vol-path \
       --pool {{ libvirt.pool_name }} \
       {{ virtual_machine_names[item.hostname] }}-ign
   changed_when: False
@@ -30,4 +32,11 @@
     uri: '{{ libvirt.libvirt_connection_uri }}'
     command: define
     xml: '{{ lookup("template", libvirt.domain_template) }}'
+  become: True
+
+- name: Power on virtual machine {{ virtual_machine_names[item.hostname] }}
+  virt:
+    uri: '{{ libvirt.libvirt_connection_uri }}'
+    name: '{{ item.hostname }}.{{ openshift_install_config.cluster_domain }}'
+    state: running
   become: True
